@@ -51,5 +51,6 @@
     "submit_flag_check": "提交",
     "submit_flag_judge": "校验中",
     "pending_hints": "还有 {{count}} 条提示将于 {{time}} 放出",
-    "no_released_hints": "提示尚未放出"
+    "no_released_hints": "提示尚未放出",
+    "attachment_removed": "附件已移除"
 }

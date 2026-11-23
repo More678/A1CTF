@@ -22,8 +22,8 @@ func processQueueingJudge(judge *models.Judge) error {
 		flagCorrect := false
 
 		switch judge.Challenge.FlagType {
-		case models.FlagTypeDynamic:
-			// 动态和TeamFlag库里的比较
+		case models.FlagTypeDynamic, models.FlagTypeAttachmentPool:
+			// 动态（含附件池）和TeamFlag库里的比较
 			flagCorrect = judge.JudgeContent == judge.TeamFlag.FlagContent
 		case models.FlagTypeStatic:
 			// 静态直接比较

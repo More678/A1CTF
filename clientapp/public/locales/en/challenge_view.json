@@ -51,5 +51,6 @@
     "submit_flag_check": "Submit",
     "submit_flag_judge": "Judging",
     "pending_hints": "{{count}} more hint(s) will be released at {{time}}",
-    "no_released_hints": "No hints released yet"
+    "no_released_hints": "No hints released yet",
+    "attachment_removed": "Attachment removed"
 }

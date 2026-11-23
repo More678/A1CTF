@@ -353,6 +353,11 @@ func main() {
 			challengeGroup.GET("/:challenge_id", controllers.AdminGetChallenge)
 			challengeGroup.PUT("/:challenge_id", controllers.AdminUpdateChallenge)
 
+			// 动态Flag（附件池）
+			challengeGroup.POST("/pool/import", controllers.AdminImportAttachmentPool)
+			challengeGroup.POST("/:challenge_id/pool/reassign", controllers.AdminReassignAttachmentPool)
+			challengeGroup.GET("/:challenge_id/pool/assignments", controllers.AdminGetAttachmentPoolAssignments)
+
 			challengeGroup.POST("/search", controllers.AdminSearchChallenges)
 		}
 

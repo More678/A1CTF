@@ -43,7 +43,7 @@ func HandleFlagAntiCheatTask(ctx context.Context, t *asynq.Task) error {
 	var judge models.Judge
 	dbtool.DB().Model(&models.Judge{}).Where("judge_id = ?", p.Judge.JudgeID).Preload("TeamFlag").Preload("Challenge").First(&judge)
 
-	if judge.TeamFlag.FlagContent != judge.JudgeContent && judge.Challenge.FlagType == models.FlagTypeDynamic {
+	if judge.TeamFlag.FlagContent != judge.JudgeContent && (judge.Challenge.FlagType == models.FlagTypeDynamic || judge.Challenge.FlagType == models.FlagTypeAttachmentPool) {
 		// 如果 flag 不一致，需要检查是否是别的队伍的 Flag
 		var teamFlag models.TeamFlag
 		if err := dbtool.DB().Model(&models.TeamFlag{}).Where("flag_content = ? AND team_id != ?", judge.JudgeContent, judge.TeamID).Preload("Team").First(&teamFlag).Error; err == nil {

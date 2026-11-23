@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"a1ctf/src/db/models"
+	attachmentpool "a1ctf/src/utils/attachment_pool"
 	dbtool "a1ctf/src/utils/db_tool"
 	i18ntool "a1ctf/src/utils/i18n_tool"
 	k8stool "a1ctf/src/utils/k8s_tool"
@@ -140,6 +141,14 @@ func AdminCreateChallenge(c *gin.Context) {
 		}
 	}
 
+	if err := attachmentpool.Validate(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: err.Error()}),
+		})
+		return
+	}
+
 	payload.CreateTime = time.Now().UTC()
 	payload.ChallengeID = nil
 
@@ -249,13 +258,66 @@ func AdminUpdateChallenge(c *gin.Context) {
 		return
 	}
 
-	if err := dbtool.DB().Model(&models.Challenge{}).Where("challenge_id = ?", payload.ChallengeID).Select("*").Updates(payload).Error; err != nil {
+	if err := attachmentpool.Validate(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: err.Error()}),
+		})
+		return
+	}
+
+	// 附件池：删除或修改了已被分配的条目时，需要管理员确认后保存并重新分配
+	newPool := attachmentpool.FindPool(payload.Attachments)
+	oldPool := attachmentpool.FindPool(existingChallenge.Attachments)
+	needReassign := false
+	if newPool != nil && oldPool != nil {
+		affected, err := attachmentpool.CountAffectedTeams(dbtool.DB(), challengeID, attachmentpool.RemovedFlags(oldPool.Pool, newPool.Pool))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code":    500,
+				"message": i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "FailedToUpdateChallenge"}),
+			})
+			return
+		}
+		if affected > 0 {
+			if c.Query("confirm_reassign") != "true" {
+				c.JSON(http.StatusConflict, gin.H{
+					"code":           409,
+					"message":        i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "AttachmentPoolEntriesAssigned", TemplateData: map[string]interface{}{"Count": affected}}),
+					"affected_teams": affected,
+				})
+				return
+			}
+			needReassign = true
+		}
+	}
+
+	var reassignedGames []int64
+	err = dbtool.DB().Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.Challenge{}).Where("challenge_id = ?", payload.ChallengeID).Select("*").Updates(payload).Error; err != nil {
+			return err
+		}
+		if needReassign {
+			_, games, err := attachmentpool.ReassignUnsolved(tx, challengeID, newPool.Pool)
+			if err != nil {
+				return err
+			}
+			reassignedGames = games
+		}
+		return nil
+	})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
 			"message": i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "FailedToUpdateChallenge"}),
 		})
 		return
 	}
+
+	for _, gameID := range reassignedGames {
+		ristretto_tool.InvalidateTeamFlags(gameID, challengeID)
+	}
+	ristretto_tool.InvalidateChallengeAttachments(challengeID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,

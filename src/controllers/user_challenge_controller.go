@@ -3,6 +3,7 @@ package controllers
 import (
 	"a1ctf/src/db/models"
 	"a1ctf/src/tasks"
+	attachmentpool "a1ctf/src/utils/attachment_pool"
 	dbtool "a1ctf/src/utils/db_tool"
 	i18ntool "a1ctf/src/utils/i18n_tool"
 	"a1ctf/src/utils/ristretto_tool"
@@ -95,6 +96,42 @@ func UserGetGameChallenge(c *gin.Context) {
 		}
 	}
 
+	// 动态Flag（附件池）：同步分配，保证本次返回的附件就是该队伍的
+	var poolTeamFlag *models.TeamFlag
+	if gameChallenge.Challenge.FlagType == models.FlagTypeAttachmentPool {
+		pool := attachmentpool.FindPool(gameChallenge.Challenge.Attachments)
+		if pool == nil || len(pool.Pool) == 0 {
+			c.JSON(http.StatusInternalServerError, webmodels.ErrorMessage{
+				Code:    500,
+				Message: i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "FailedToLoadChallengeAttachments"}),
+			})
+			return
+		}
+
+		allFlags, err := ristretto_tool.CachedAllTeamFlags(game.GameID, gameChallenge.ChallengeID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, webmodels.ErrorMessage{
+				Code:    500,
+				Message: i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "SystemError"}),
+			})
+			return
+		}
+
+		if existing, exists := allFlags[team.TeamID]; exists {
+			poolTeamFlag = existing
+		} else {
+			poolTeamFlag, err = attachmentpool.EnsureTeamFlag(dbtool.DB(), game.GameID, gameChallenge.ChallengeID, team.TeamID, team.TeamHash, pool.Pool)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, webmodels.ErrorMessage{
+					Code:    500,
+					Message: i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "SystemError"}),
+				})
+				return
+			}
+			ristretto_tool.InvalidateTeamFlags(game.GameID, gameChallenge.ChallengeID)
+		}
+	}
+
 	// 3. 使用缓存获取附件信息
 	userAttachments, err := ristretto_tool.CachedChallengeAttachments(*gameChallenge.Challenge.ChallengeID)
 	if err != nil {
@@ -103,6 +140,29 @@ func UserGetGameChallenge(c *gin.Context) {
 			Message: i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "FailedToLoadChallengeAttachments"}),
 		})
 		return
+	}
+
+	// 附件池：把池替换成分配给该队伍的文件（以静态文件形式返回）；条目已被删除时保留 ATTACHMENTPOOR 类型且不带文件，前端显示"附件已移除"
+	if poolTeamFlag != nil {
+		pool := attachmentpool.FindPool(gameChallenge.Challenge.Attachments)
+		teamAttachments := make([]webmodels.UserAttachmentConfig, 0, len(userAttachments))
+		for _, attach := range userAttachments {
+			if attach.AttachType != models.AttachmentTypeAttachmentPool {
+				teamAttachments = append(teamAttachments, attach)
+				continue
+			}
+			personal := webmodels.UserAttachmentConfig{
+				AttachName: attach.AttachName,
+				AttachType: models.AttachmentTypeAttachmentPool,
+			}
+			if entry := attachmentpool.EntryForFlag(pool.Pool, poolTeamFlag.FlagContent); entry != nil {
+				fileID := entry.FileID
+				personal.AttachType = models.AttachmentTypeStaticFile
+				personal.AttachHash = &fileID
+			}
+			teamAttachments = append(teamAttachments, personal)
+		}
+		userAttachments = teamAttachments
 	}
 
 	// 4. 使用缓存获取可见提示
@@ -231,8 +291,8 @@ func UserGameChallengeSubmitFlag(c *gin.Context) {
 		SubmiterIP:   &clientIP,
 	}
 
-	// 判断是否是动态 Flag，如果是就从 teamFlag 的 map 缓存中拿 flag
-	if gameChallenge.Challenge.FlagType == models.FlagTypeDynamic {
+	// 判断是否是动态 Flag 或动态Flag（附件池），如果是就从 teamFlag 的 map 缓存中拿 flag
+	if gameChallenge.Challenge.FlagType == models.FlagTypeDynamic || gameChallenge.Challenge.FlagType == models.FlagTypeAttachmentPool {
 		teamFlagMap, err := ristretto_tool.CachedAllTeamFlags(game.GameID, gameChallenge.ChallengeID)
 		teamFlag, exsist := teamFlagMap[team.TeamID]
 		if !exsist || err != nil {

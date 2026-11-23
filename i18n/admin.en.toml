@@ -598,3 +598,35 @@ other = "The requested writeup was not found."
 [FailedToOpenWriteup]
 description = "Failed to open writeup"
 other = "Failed to open writeup file."
+
+[AttachmentPoolFlagTypeMismatch]
+description = "Dynamic Flag (Attachment Pool) must be used together with an attachment pool, and vice versa"
+other = "Dynamic Flag (Attachment Pool) must be used together with an attachment pool, and vice versa"
+
+[AttachmentPoolMustBeOnlyAttachment]
+description = "An attachment pool challenge can only have a single attachment pool and no other attachments"
+other = "An attachment pool challenge can only have a single attachment pool and no other attachments"
+
+[AttachmentPoolEmpty]
+description = "The attachment pool cannot be empty"
+other = "The attachment pool cannot be empty"
+
+[AttachmentPoolInvalidEntry]
+description = "Every attachment pool entry must have a file and a flag"
+other = "Every attachment pool entry must have a file and a flag"
+
+[AttachmentPoolEntriesAssigned]
+description = "{{.Count}} team(s) are assigned to removed or modified pool entries. Confirm to save and reassign unsolved teams"
+other = "{{.Count}} team(s) are assigned to removed or modified pool entries. Confirm to save and reassign unsolved teams"
+
+[ChallengeNotAttachmentPool]
+description = "This challenge is not a Dynamic Flag (Attachment Pool) challenge"
+other = "This challenge is not a Dynamic Flag (Attachment Pool) challenge"
+
+[AttachmentPoolImportTooLarge]
+description = "The imported files are too large or too many"
+other = "The imported files are too large or too many"
+
+[AttachmentPoolInvalidArchive]
+description = "Failed to parse archive (zip only; manifest.json must be {\"file name\": \"flag\"}; file names must be unique)"
+other = "Failed to parse archive (zip only; manifest.json must be {\"file name\": \"flag\"}; file names must be unique)"

@@ -40,7 +40,11 @@ const FileDownloader = (
         return Math.round(bytesPerSecond / Math.pow(k, i)).toString() + ' ' + sizes[i];
     };
 
+    // 附件池条目已被出题人删除，没有可下载的文件
+    const removed = attach.attach_type == AttachmentType.ATTACHMENTPOOR
+
     const handleDownload = (attach: UserAttachmentConfig) => {
+        if (removed) return
 
 
         if (attach.attach_type == AttachmentType.STATICFILE || attach.attach_type == AttachmentType.REMOTEFILE) {
@@ -136,7 +140,7 @@ const FileDownloader = (
     return (
         <Button variant="secondary" onClick={() => handleDownload(attach)}
             className="p-0 w-full lg:w-[300px] h-[105px] text-md [&_svg]:size-5 transition-all duration-300 hover:bg-foreground/20 select-none disabled:opacity-100"
-            disabled={downloading}
+            disabled={downloading || removed}
             title={attach.attach_name}
         >
             <div className={`flex flex-col p-4 w-full h-full ${!downloading ? "justify-center gap-2" : "justify-between"}`}>
@@ -168,7 +172,7 @@ const FileDownloader = (
                         </div>
                         <div className="flex gap-2 items-center">
                             <FileDown />
-                            <span>{t("download")}</span>
+                            <span>{removed ? t("attachment_removed") : t("download")}</span>
                         </div>
                     </>
                 )}

@@ -37,6 +37,7 @@ import { Switch } from "components/ui/switch";
 import LazyThemedEditor from "components/modules/LazyThemedEditor";
 import useSWR from "swr";
 import { useTranslation } from "react-i18next";
+import { AttachmentPoolEditor, onAttachTypeChange, onFlagTypeChange, refinePoolForm, usePoolAwareChallengeUpdate } from "components/admin/AttachmentPoolEditor";
 
 interface ContainerFormProps {
     control: any;
@@ -50,6 +51,7 @@ interface AttachmentFormProps {
     form: any;
     removeAttachment: (index: number) => void;
     onFormSubmit: () => Promise<void>;
+    challengeId?: number;
 }
 
 function ContainerForm({ control, index, removeContainer }: ContainerFormProps) {
@@ -316,7 +318,7 @@ function ContainerForm({ control, index, removeContainer }: ContainerFormProps) 
     );
 }
 
-function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }: AttachmentFormProps) {
+function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit, challengeId }: AttachmentFormProps) {
 
     const attachType = useWatch({
         control,
@@ -360,8 +362,8 @@ function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }
                             </div>
                             <Select onValueChange={(e) => {
                                 field.onChange(e)
-
-                            }} defaultValue={field.value}>
+                                onAttachTypeChange(form, index, e)
+                            }} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="选择附件类型" />
@@ -387,10 +389,10 @@ function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }
                                                 <span className="text-[12px] font-bold">远程附件</span>
                                             </div>
                                         </SelectItem>
-                                        <SelectItem value="ATTACHMENTPOOR" disabled>
+                                        <SelectItem value="ATTACHMENTPOOR">
                                             <div className="w-full flex gap-2 items-center h-[25px]">
                                                 <TableProperties />
-                                                <span className="text-[12px] font-bold">附件池(随机)</span>
+                                                <span className="text-[12px] font-bold">附件池</span>
                                             </div>
                                         </SelectItem>
                                     </SelectContent>
@@ -465,6 +467,9 @@ function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }
                     )}
                 />
             )}
+            {attachType == "ATTACHMENTPOOR" && (
+                <AttachmentPoolEditor control={control} form={form} index={index} challengeId={challengeId} />
+            )}
         </div>
     );
 }
@@ -483,6 +488,7 @@ export function InlineChallengeEditFormWrapper({ challenge_id }: { challenge_id:
 }
 
 export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: AdminChallengeConfig }) {
+    const { t } = useTranslation("challenge_edit");
 
     const categories: { [key: string]: any } = {
         "MISC": <Radar size={21} />,
@@ -517,7 +523,7 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
         }),
         allow_wan: z.boolean(),
         allow_dns: z.boolean(),
-        flag_type: z.enum(["FlagTypeDynamic", "FlagTypeStatic"]),
+        flag_type: z.enum(["FlagTypeDynamic", "FlagTypeStatic", "FlagTypeAttachmentPool"]),
         // 新增 container_config 部分
         container_config: z.array(
             z.object({
@@ -551,9 +557,13 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
                 attach_url: z.string().nullable(),
                 download_hash: z.string().nullable(),
                 generate_script: z.string().nullable(),
+                pool: z.array(z.object({
+                    file_id: z.string().min(1, { message: t("attachment.pool.error.file_id") }),
+                    flag: z.string().trim().min(1, { message: t("attachment.pool.error.flag") }),
+                })).optional(),
             })
         )
-    });
+    }).superRefine((values, ctx) => refinePoolForm(values, ctx, t));
 
     const env_to_string = (data: { name: string, value: string }[]) => {
 
@@ -612,7 +622,8 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
                 attach_type: e.attach_type || "",
                 download_hash: "",
                 attach_url: e.attach_url || "",
-                generate_script: e.generate_script || ""
+                generate_script: e.generate_script || "",
+                pool: e.pool ?? []
             })) || []
         }
     })
@@ -636,6 +647,9 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
     });
 
     const [_showScript, setShowScript] = useState(false);
+
+    const flagType = useWatch({ control: form.control, name: "flag_type" });
+    const { update: updateChallenge, dialog: poolConfirmDialog } = usePoolAwareChallengeUpdate();
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         const finalData = {
@@ -662,13 +676,14 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
             flag_type: values.flag_type
         };
 
-        api.admin.updateChallenge(challengeInfo?.challenge_id ?? 0, finalData as AdminChallengeConfig).then(() => {
+        updateChallenge(challengeInfo?.challenge_id ?? 0, finalData as AdminChallengeConfig, () => {
             toast.success("更新成功");
         })
     }
 
     return (
         <Form {...form}>
+            {poolConfirmDialog}
             <div className="space-y-8 w-full">
                 <div className="flex gap-10 items-center">
                     <div className="w-1/3">
@@ -808,7 +823,7 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
                                 <div className="flex-1" />
                                 <FormMessage className="text-[14px]" />
                             </div>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={(e) => { field.onChange(e); onFlagTypeChange(form, e) }} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="选择一个Flag类型" />
@@ -823,6 +838,11 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
                                     <SelectItem key="FlagTypeStatic" value="FlagTypeStatic">
                                         <div className="w-full flex gap-2 items-center h-[30px]">
                                             <span className="text-[14px] font-bold">静态Flag (无反作弊)</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem key="FlagTypeAttachmentPool" value="FlagTypeAttachmentPool">
+                                        <div className="w-full flex gap-2 items-center h-[30px]">
+                                            <span className="text-[14px] font-bold">动态Flag（附件池）</span>
                                         </div>
                                     </SelectItem>
                                 </SelectContent>
@@ -921,6 +941,7 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
                         <Button
                             type="button"
                             variant={"outline"}
+                            disabled={flagType == "FlagTypeAttachmentPool"}
                             onClick={() =>
                                 appendAttachment({
                                     attach_hash: null,
@@ -943,6 +964,7 @@ export function InlineChallengeEditForm({ challengeInfo }: { challengeInfo: Admi
                             index={index}
                             form={form}
                             removeAttachment={removeAttachment}
+                            challengeId={challengeInfo?.challenge_id}
                             onFormSubmit={async () => {
                                 return new Promise<void>((resolve, reject) => {
                                     form.handleSubmit(

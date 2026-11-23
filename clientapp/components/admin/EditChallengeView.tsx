@@ -39,6 +39,7 @@ import { UploadFileDialog } from "components/dialogs/UploadFileDialog";
 import { Switch } from "components/ui/switch";
 import { useTheme } from "next-themes";
 import LazyThemedEditor from "components/modules/LazyThemedEditor";
+import { AttachmentPoolEditor, onAttachTypeChange, onFlagTypeChange, refinePoolForm, usePoolAwareChallengeUpdate } from "components/admin/AttachmentPoolEditor";
 import { useTranslation, Trans } from "react-i18next";
 
 interface ContainerFormProps {
@@ -53,6 +54,7 @@ interface AttachmentFormProps {
     form: any;
     removeAttachment: (index: number) => void;
     onFormSubmit: () => Promise<void>;
+    challengeId?: number;
 }
 
 function ContainerForm({ control, index, removeContainer }: ContainerFormProps) {
@@ -323,7 +325,7 @@ function ContainerForm({ control, index, removeContainer }: ContainerFormProps) 
     );
 }
 
-function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }: AttachmentFormProps) {
+function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit, challengeId }: AttachmentFormProps) {
 
     const attachType = useWatch({
         control,
@@ -369,8 +371,8 @@ function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }
                             </div>
                             <Select onValueChange={(e) => {
                                 field.onChange(e)
-
-                            }} defaultValue={field.value}>
+                                onAttachTypeChange(form, index, e)
+                            }} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder={t("attachment.type.select")} />
@@ -396,7 +398,7 @@ function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }
                                                 <span className="text-[12px] font-bold">{t("attachment.type.remote")}</span>
                                             </div>
                                         </SelectItem>
-                                        <SelectItem value="ATTACHMENTPOOR" disabled>
+                                        <SelectItem value="ATTACHMENTPOOR">
                                             <div className="w-full flex gap-2 items-center h-[25px]">
                                                 <TableProperties />
                                                 <span className="text-[12px] font-bold">{t("attachment.type.pool")}</span>
@@ -476,6 +478,9 @@ function AttachmentForm({ control, index, form, removeAttachment, onFormSubmit }
                     </UploadFileDialog>
                 </div>
             )}
+            {attachType == "ATTACHMENTPOOR" && (
+                <AttachmentPoolEditor control={control} form={form} index={index} challengeId={challengeId} />
+            )}
         </div>
     );
 }
@@ -517,7 +522,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
         }),
         allow_wan: z.boolean(),
         allow_dns: z.boolean(),
-        flag_type: z.enum(["FlagTypeDynamic", "FlagTypeStatic"]),
+        flag_type: z.enum(["FlagTypeDynamic", "FlagTypeStatic", "FlagTypeAttachmentPool"]),
         // 新增 container_config 部分
         container_config: z.array(
             z.object({
@@ -549,9 +554,13 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                 attach_url: z.string().nullable(),
                 download_hash: z.string().nullable(),
                 generate_script: z.string().nullable(),
+                pool: z.array(z.object({
+                    file_id: z.string().min(1, { message: t("attachment.pool.error.file_id") }),
+                    flag: z.string().trim().min(1, { message: t("attachment.pool.error.flag") }),
+                })).optional(),
             })
         )
-    });
+    }).superRefine((values, ctx) => refinePoolForm(values, ctx, t));
 
     const env_to_string = (data: { name: string, value: string }[]) => {
 
@@ -610,7 +619,8 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                 attach_type: e.attach_type || "",
                 download_hash: "",
                 attach_url: e.attach_url || "",
-                generate_script: e.generate_script || ""
+                generate_script: e.generate_script || "",
+                pool: e.pool ?? []
             })) || []
         }
     })
@@ -634,6 +644,9 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
     });
 
     const [showScript, setShowScript] = useState(false);
+
+    const flagType = useWatch({ control: form.control, name: "flag_type" });
+    const { update: updateChallenge, dialog: poolConfirmDialog } = usePoolAwareChallengeUpdate();
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         const finalData = {
@@ -665,7 +678,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                 toast.success(t("success.create"))
             })
         } else {
-            api.admin.updateChallenge(challenge_info.challenge_id!, finalData as AdminChallengeConfig).then(() => {
+            updateChallenge(challenge_info.challenge_id!, finalData as AdminChallengeConfig, () => {
                 toast.success(t("success.update"));
             })
         }
@@ -676,6 +689,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
 
     return (
         <div className="absolute w-screen h-screen bg-background items-center justify-center flex select-none overflow-x-hidden overflow-hidden">
+            {poolConfirmDialog}
             <Form {...form}>
                 <MacScrollbar className="h-full w-full flex flex-col items-center"
                     skin={theme == "light" ? "light" : "dark"}
@@ -863,7 +877,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                                                 <div className="flex-1" />
                                                 <FormMessage className="text-[14px]" />
                                             </div>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={(e) => { field.onChange(e); onFlagTypeChange(form, e) }} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder={t("form.flag.placeholder")} />
@@ -880,6 +894,11 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                                                             <span className="text-[14px] font-bold">{t("form.flag.static")}</span>
                                                         </div>
                                                     </SelectItem>
+                                                    <SelectItem key="FlagTypeAttachmentPool" value="FlagTypeAttachmentPool">
+                                                        <div className="w-full flex gap-2 items-center h-[30px]">
+                                                            <span className="text-[14px] font-bold">{t("form.flag.pool")}</span>
+                                                        </div>
+                                                    </SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormDescription>
@@ -888,7 +907,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
+                                {flagType != "FlagTypeAttachmentPool" && <FormField
                                     control={form.control}
                                     name="judge_config.flag_template"
                                     render={({ field }) => (
@@ -913,7 +932,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                                             </div>
                                         </FormItem>
                                     )}
-                                />
+                                />}
                             </>
                         )}
 
@@ -1006,6 +1025,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                                     type="button"
                                     variant={"outline"}
                                     className="[&_svg]:size-5"
+                                    disabled={flagType == "FlagTypeAttachmentPool"}
                                     onClick={() =>
                                         appendAttachment({
                                             attach_hash: null,
@@ -1028,6 +1048,7 @@ export function EditChallengeView({ challenge_info, isCreate = false }: { challe
                                     index={index}
                                     form={form}
                                     removeAttachment={removeAttachment}
+                                    challengeId={isCreate ? undefined : challenge_info.challenge_id}
                                     onFormSubmit={async () => {
                                         return new Promise<void>((resolve, reject) => {
                                             form.handleSubmit(

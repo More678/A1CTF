@@ -452,8 +452,11 @@ func AdminUpdateGameChallenge(c *gin.Context) {
 		var judgeConfig models.JudgeConfig
 		if judgeConfigBytes, err := sonic.Marshal(judgeConfigData); err == nil {
 			if err := sonic.Unmarshal(judgeConfigBytes, &judgeConfig); err == nil {
-				// FlagTemplate 必须存在，且长度不少于3个字符
-				if judgeConfig.FlagTemplate == nil || *judgeConfig.FlagTemplate == "" || len(*judgeConfig.FlagTemplate) < 4 {
+				// FlagTemplate 必须存在，且长度不少于3个字符（动态Flag（附件池）的 flag 来自附件池，不使用模板）
+				var flagTypes []models.FlagType
+				dbtool.DB().Model(&models.Challenge{}).Where("challenge_id = ?", challengeID).Pluck("flag_type", &flagTypes)
+				isPool := len(flagTypes) > 0 && flagTypes[0] == models.FlagTypeAttachmentPool
+				if !isPool && (judgeConfig.FlagTemplate == nil || *judgeConfig.FlagTemplate == "" || len(*judgeConfig.FlagTemplate) < 4) {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"code":    400,
 						"message": i18ntool.Translate(c, &i18n.LocalizeConfig{MessageID: "InvalidFlagTemplate"}),

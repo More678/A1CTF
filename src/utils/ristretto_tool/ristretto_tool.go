@@ -1191,6 +1191,16 @@ func CachedContainerStatus(gameID int64, challengeID int64, teamID int64) ([]mod
 }
 
 // 缓存所有队伍的Flag信息，解决高并发查询team_flags表的性能问题
+// InvalidateTeamFlags 清除某比赛某题目的队伍 flag 缓存（附件池重新分配后调用）
+func InvalidateTeamFlags(gameID int64, challengeID int64) {
+	cachePool.Del(fmt.Sprintf("all_team_flags_%d_%d", gameID, challengeID))
+}
+
+// InvalidateChallengeAttachments 清除题目附件缓存
+func InvalidateChallengeAttachments(challengeID int64) {
+	cachePool.Del(fmt.Sprintf("challenge_attachments_%d", challengeID))
+}
+
 func CachedAllTeamFlags(gameID int64, challengeID int64) (map[int64]*models.TeamFlag, error) {
 	var teamFlagsMap map[int64]*models.TeamFlag
 

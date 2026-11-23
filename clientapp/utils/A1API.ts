@@ -126,6 +126,7 @@ export enum ChallengeContainerType {
 export enum FlagType {
   FlagTypeDynamic = "FlagTypeDynamic",
   FlagTypeStatic = "FlagTypeStatic",
+  FlagTypeAttachmentPool = "FlagTypeAttachmentPool",
 }
 
 export enum ChallengeCategory {
@@ -160,6 +161,30 @@ export enum AttachmentType {
   STATICFILE = "STATICFILE",
   DYNAMICFILE = "DYNAMICFILE",
   REMOTEFILE = "REMOTEFILE",
+  ATTACHMENTPOOR = "ATTACHMENTPOOR",
+}
+
+export interface AttachmentPoolEntry {
+  file_id: string;
+  flag: string;
+}
+
+export interface AttachmentPoolImportEntry {
+  file_id: string;
+  flag: string;
+  file_name: string;
+}
+
+export interface AttachmentPoolAssignment {
+  game_id: number;
+  game_name: string;
+  team_id: number;
+  team_name: string;
+  flag: string;
+  /** -1 means the assigned entry has been removed */
+  entry_index: number;
+  file_id?: string | null;
+  solved: boolean;
 }
 
 /** User login form */
@@ -189,6 +214,7 @@ export interface Attachment {
   attach_type: AttachmentType;
   attach_url: string;
   generate_script?: string | null;
+  pool?: AttachmentPoolEntry[];
 }
 
 export interface ExposePort {
@@ -2868,6 +2894,10 @@ export class Api<
     updateChallenge: (
       challengeId: number,
       data: AdminChallengeConfig,
+      query?: {
+        /** Save and reassign unsolved teams when assigned attachment pool entries were removed or modified */
+        confirm_reassign?: boolean;
+      },
       params: RequestParams = {},
     ) =>
       this.request<
@@ -2879,8 +2909,82 @@ export class Api<
       >({
         path: `/api/admin/challenge/${challengeId}`,
         method: "PUT",
+        query: query,
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags admin
+     * @name ImportAttachmentPool
+     * @summary Import attachment pool files (zip archive with optional manifest.json, or raw files)
+     * @request POST:/api/admin/challenge/pool/import
+     */
+    importAttachmentPool: (data: FormData, params: RequestParams = {}) =>
+      this.request<
+        {
+          code: number;
+          data: AttachmentPoolImportEntry[];
+        },
+        ErrorMessage
+      >({
+        path: `/api/admin/challenge/pool/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags admin
+     * @name ReassignAttachmentPool
+     * @summary Reassign attachment pool entries for all unsolved teams
+     * @request POST:/api/admin/challenge/{challenge_id}/pool/reassign
+     */
+    reassignAttachmentPool: (challengeId: number, params: RequestParams = {}) =>
+      this.request<
+        {
+          code: number;
+          data: {
+            changed_teams: number;
+          };
+        },
+        any
+      >({
+        path: `/api/admin/challenge/${challengeId}/pool/reassign`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags admin
+     * @name GetAttachmentPoolAssignments
+     * @summary List the attachment pool entry assigned to each team
+     * @request GET:/api/admin/challenge/{challenge_id}/pool/assignments
+     */
+    getAttachmentPoolAssignments: (
+      challengeId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          code: number;
+          data: AttachmentPoolAssignment[];
+        },
+        any
+      >({
+        path: `/api/admin/challenge/${challengeId}/pool/assignments`,
+        method: "GET",
         format: "json",
         ...params,
       }),

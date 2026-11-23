@@ -75,7 +75,7 @@
             "static": "Static Attachment",
             "dynamic": "Dynamic Attachment",
             "remote": "Remote Attachment",
-            "pool": "Random Attachment Pool"
+            "pool": "Attachment Pool"
         },
         "url": "Attachment Download URL",
         "id": "Attachment ID",
@@ -90,7 +90,36 @@
             "type": "A valid attachment type must be selected"
         },
         "add": "Add Attachment",
-        "empty": "You haven't added any attachments yet"
+        "empty": "You haven't added any attachments yet",
+        "pool": {
+            "description": "Each entry is a file with its flag. Every team is assigned one entry (there may be fewer entries than teams; teams sharing an entry share the flag).\nWhen importing an archive, a root manifest.json ({\"file name\": \"flag\"}) sets the flags; otherwise the file name without extension is used. Players always download the file under the attachment name above.",
+            "import_archive": "Import Archive",
+            "import_files": "Import Files",
+            "add_entry": "Add Entry",
+            "import_success": "Imported {{count}} entries, remember to save the challenge",
+            "count": "{{count}} entries",
+            "file_id": "File ID",
+            "reassign": "Reassign",
+            "reassign_confirm": "All unsolved teams will be reassigned using the current pool (solved teams are unchanged, submissions are kept). Continue?",
+            "reassign_success": "Reassigned, attachments changed for {{count}} team(s)",
+            "assignments": "Assignments",
+            "game": "Game",
+            "team": "Team",
+            "status": "Status",
+            "entry_removed": "Entry removed",
+            "solved": "Solved",
+            "unsolved": "Unsolved",
+            "no_assignments": "No team has been assigned yet",
+            "save_failed": "Save failed",
+            "error": {
+                "need_pool": "Dynamic Flag (Attachment Pool) requires an attachment pool",
+                "need_flag_type": "An attachment pool can only be used with Dynamic Flag (Attachment Pool)",
+                "only_one": "An attachment pool challenge can only have this single attachment",
+                "empty": "The attachment pool cannot be empty",
+                "file_id": "File ID is required",
+                "flag": "Flag is required"
+            }
+        }
     },
     "form": {
         "name": {
@@ -126,7 +155,8 @@
             "dynamic": "Dynamic Flag (Leet enabled)",
             "static": "Static Flag (No Anti-Cheat)",
             "description": "Please make sure to choose the correct flag type. In dynamic flag mode, the platform will use Leet to generate different but similar flags for each team. Avoid using overly short flags.",
-            "info": "<span>Flags support template variables</span><span>[team_hash] will be replaced with the team's unique identifier</span><span>[team_name] will be replaced with the team name</span><span>[game_id] will be replaced with the competition ID</span><span>[uuid] will be replaced with a random UUID</span><span>[random_string_??] will be replaced with a random string, where ?? indicates the length</span><span>If you choose Dynamic Flag in the challenge settings, Leet anti-cheat will be enabled</span><span>Template variable parts will not be replaced by Leet</span>"
+            "info": "<span>Flags support template variables</span><span>[team_hash] will be replaced with the team's unique identifier</span><span>[team_name] will be replaced with the team name</span><span>[game_id] will be replaced with the competition ID</span><span>[uuid] will be replaced with a random UUID</span><span>[random_string_??] will be replaced with a random string, where ?? indicates the length</span><span>If you choose Dynamic Flag in the challenge settings, Leet anti-cheat will be enabled</span><span>Template variable parts will not be replaced by Leet</span>",
+            "pool": "Dynamic Flag (Attachment Pool)"
         }
     },
     "success": {

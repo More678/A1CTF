@@ -529,6 +529,19 @@ paths:
           description: Challenge not found
         '400':
           description: Bad request
+        '409':
+          description: Attachment pool entries that are already assigned were removed or modified, retry with confirm_reassign=true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  affected_teams:
+                    type: integer
         '500':
           description: Server error
           content:
@@ -547,6 +560,113 @@ paths:
           description: The ID of the challenge to retrieve
           schema:
             type: integer
+        - name: confirm_reassign
+          in: query
+          required: false
+          description: Save and reassign unsolved teams when assigned attachment pool entries were removed or modified
+          schema:
+            type: boolean
+  /api/admin/challenge/pool/import:
+    post:
+      tags: [admin]
+      operationId: importAttachmentPool
+      summary: Import attachment pool files (zip archive with optional manifest.json, or raw files)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                archive:
+                  type: string
+                  format: binary
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Imported entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AttachmentPoolImportEntry'
+                required:
+                  - code
+                  - data
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+  /api/admin/challenge/{challenge_id}/pool/reassign:
+    post:
+      tags: [admin]
+      operationId: reassignAttachmentPool
+      summary: Reassign attachment pool entries for all unsolved teams
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reassigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      changed_teams:
+                        type: integer
+                    required:
+                      - changed_teams
+                required:
+                  - code
+                  - data
+  /api/admin/challenge/{challenge_id}/pool/assignments:
+    get:
+      tags: [admin]
+      operationId: getAttachmentPoolAssignments
+      summary: List the attachment pool entry assigned to each team
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AttachmentPoolAssignment'
+                required:
+                  - code
+                  - data
   /api/admin/challenge/list:
     post:
       tags: [admin]
@@ -4015,12 +4135,66 @@ components:
         - "STATICFILE"
         - "DYNAMICFILE"
         - "REMOTEFILE"
+        - "ATTACHMENTPOOR"
       description: |
         Type of the attachment:
         - STATICFILE: Static file stored on server
         - DYNAMICFILE: Dynamically generated file
         - REMOTEFILE: File hosted on external server
+        - ATTACHMENTPOOR: Attachment pool, each team is assigned one entry (file + flag)
       example: "STATICFILE"
+    AttachmentPoolEntry:
+      type: object
+      properties:
+        file_id:
+          type: string
+        flag:
+          type: string
+      required:
+        - file_id
+        - flag
+    AttachmentPoolImportEntry:
+      type: object
+      properties:
+        file_id:
+          type: string
+        flag:
+          type: string
+        file_name:
+          type: string
+      required:
+        - file_id
+        - flag
+        - file_name
+    AttachmentPoolAssignment:
+      type: object
+      properties:
+        game_id:
+          type: integer
+        game_name:
+          type: string
+        team_id:
+          type: integer
+        team_name:
+          type: string
+        flag:
+          type: string
+        entry_index:
+          type: integer
+          description: -1 means the assigned entry has been removed
+        file_id:
+          type: string
+          nullable: true
+        solved:
+          type: boolean
+      required:
+        - game_id
+        - game_name
+        - team_id
+        - team_name
+        - flag
+        - entry_index
+        - solved
     Attachment:
       type: object
       properties:
@@ -4036,6 +4210,10 @@ components:
         generate_script:
           type: string
           nullable: true
+        pool:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentPoolEntry'
       required:
         - attach_name
         - attach_type
@@ -4121,6 +4299,7 @@ components:
       enum:
         - FlagTypeDynamic
         - FlagTypeStatic
+        - FlagTypeAttachmentPool
     EnvironmentItem:
       type: object
       properties:

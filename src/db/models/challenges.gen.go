@@ -17,7 +17,15 @@ const (
 	AttachmentTypeStaticFile  AttachmentType = "STATICFILE"
 	AttachmentTypeDynamicFile AttachmentType = "DYNAMICFILE"
 	AttachmentTypeRemoteFile  AttachmentType = "REMOTEFILE"
+	// AttachmentTypeAttachmentPool 附件池：出题人预先上传 N 个文件，每个文件对应一个 flag，按队伍分配
+	AttachmentTypeAttachmentPool AttachmentType = "ATTACHMENTPOOR"
 )
+
+// AttachmentPoolEntry 附件池中的一个条目
+type AttachmentPoolEntry struct {
+	FileID string `json:"file_id"`
+	Flag   string `json:"flag"`
+}
 
 type AttachmentConfig struct {
 	AttachName     string         `json:"attach_name"`
@@ -26,6 +34,8 @@ type AttachmentConfig struct {
 	AttachHash     *string        `json:"attach_hash,omitempty"`
 	DownloadHash   *string        `json:"download_hash,omitempty"`
 	GenerateScript *string        `json:"generate_script,omitempty"`
+	// Pool 仅 ATTACHMENTPOOR 类型使用
+	Pool []AttachmentPoolEntry `json:"pool,omitempty"`
 }
 
 type AttachmentConfigs []AttachmentConfig
@@ -135,6 +145,8 @@ type FlagType string
 const (
 	FlagTypeDynamic FlagType = "FlagTypeDynamic"
 	FlagTypeStatic  FlagType = "FlagTypeStatic"
+	// FlagTypeAttachmentPool 动态Flag（附件池）：每个队伍的 flag 来自分配给它的附件池条目
+	FlagTypeAttachmentPool FlagType = "FlagTypeAttachmentPool"
 )
 
 func (e FlagType) Value() (driver.Value, error) {

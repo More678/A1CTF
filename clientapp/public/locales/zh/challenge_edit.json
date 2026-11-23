@@ -75,7 +75,7 @@
             "static": "静态附件",
             "dynamic": "动态附件",
             "remote": "远程附件",
-            "pool": "随机附件池"
+            "pool": "附件池"
         },
         "url": "附件下载地址",
         "id": "附件ID",
@@ -90,7 +90,36 @@
             "type": "需要选择一个有效的附件类型"
         },
         "add": "添加附件",
-        "empty": "您还没有添加附件哦"
+        "empty": "您还没有添加附件哦",
+        "pool": {
+            "description": "每个条目是一个文件及其对应的 Flag，系统按队伍分配其中一个（条目可以少于队伍数，分到同一条目的队伍 Flag 相同）。\n导入压缩包时，根目录的 manifest.json（{\"文件名\": \"flag\"}）可指定 Flag，否则使用文件名（去掉扩展名）作为 Flag。选手下载时文件名统一为上面的附件名称。",
+            "import_archive": "导入压缩包",
+            "import_files": "导入多个文件",
+            "add_entry": "添加条目",
+            "import_success": "已导入 {{count}} 个条目，请保存题目",
+            "count": "共 {{count}} 个条目",
+            "file_id": "文件ID",
+            "reassign": "重新分配",
+            "reassign_confirm": "将按当前附件池为所有未解出的队伍重新分配附件和 Flag（已解出的队伍不变，提交记录保留）。确定继续？",
+            "reassign_success": "已重新分配，{{count}} 支队伍的附件发生变化",
+            "assignments": "查看分配",
+            "game": "比赛",
+            "team": "队伍",
+            "status": "状态",
+            "entry_removed": "条目已删除",
+            "solved": "已解出",
+            "unsolved": "未解出",
+            "no_assignments": "还没有队伍分配到附件",
+            "save_failed": "保存失败",
+            "error": {
+                "need_pool": "动态Flag（附件池）需要一个附件池附件",
+                "need_flag_type": "附件池只能用于动态Flag（附件池）",
+                "only_one": "附件池题目只能有这一个附件",
+                "empty": "附件池不能为空",
+                "file_id": "文件ID不能为空",
+                "flag": "Flag不能为空"
+            }
+        }
     },
     "form": {
         "name": {
@@ -126,7 +155,8 @@
             "dynamic": "动态Flag (强制启用Leet)",
             "static": "静态Flag (无反作弊)",
             "description": "请务必正确选择 Flag 类型, 在动态 Flag 模式下平台回使用Leet为每只队伍生成不同但是看起来相似的 Flag, 请你不要使用过短的 Flag",
-            "info": "<span>Flag支持模板变量</span><span>[team_hash] 部分会被替换成队伍唯一标识符</span><span>[team_name] 部分会被替换成队伍名称</span><span>[game_id] 部分会被替换成比赛ID</span><span>[uuid] 部分会被替换成随机UUID</span><span>[random_string_??] 部分会被替换成随机字符串, 其中??表示字符串长度</span><span>如果你在题目设置中选择了动态Flag, 将会启用Leet进行反作弊</span><span>模板变量部分不会被Leet替换</span>"
+            "info": "<span>Flag支持模板变量</span><span>[team_hash] 部分会被替换成队伍唯一标识符</span><span>[team_name] 部分会被替换成队伍名称</span><span>[game_id] 部分会被替换成比赛ID</span><span>[uuid] 部分会被替换成随机UUID</span><span>[random_string_??] 部分会被替换成随机字符串, 其中??表示字符串长度</span><span>如果你在题目设置中选择了动态Flag, 将会启用Leet进行反作弊</span><span>模板变量部分不会被Leet替换</span>",
+            "pool": "动态Flag（附件池）"
         }
     },
     "success": {

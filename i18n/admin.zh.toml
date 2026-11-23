@@ -598,3 +598,35 @@ other = "未找到 WriteUp。"
 [FailedToOpenWriteup]
 description = "打开 WriteUp 失败"
 other = "打开 WriteUp 文件失败。"
+
+[AttachmentPoolFlagTypeMismatch]
+description = "动态Flag（附件池）必须搭配附件池附件使用，附件池附件也只能用于动态Flag（附件池）"
+other = "动态Flag（附件池）必须搭配附件池附件使用，附件池附件也只能用于动态Flag（附件池）"
+
+[AttachmentPoolMustBeOnlyAttachment]
+description = "附件池题目只能有一个附件池附件，不能再添加其他附件"
+other = "附件池题目只能有一个附件池附件，不能再添加其他附件"
+
+[AttachmentPoolEmpty]
+description = "附件池不能为空"
+other = "附件池不能为空"
+
+[AttachmentPoolInvalidEntry]
+description = "附件池中每个条目都必须有文件和 Flag"
+other = "附件池中每个条目都必须有文件和 Flag"
+
+[AttachmentPoolEntriesAssigned]
+description = "有 {{.Count}} 支队伍已分配到被删除或修改的附件池条目，确认后将保存并重新分配未解出的队伍"
+other = "有 {{.Count}} 支队伍已分配到被删除或修改的附件池条目，确认后将保存并重新分配未解出的队伍"
+
+[ChallengeNotAttachmentPool]
+description = "该题目不是动态Flag（附件池）题目"
+other = "该题目不是动态Flag（附件池）题目"
+
+[AttachmentPoolImportTooLarge]
+description = "导入的文件过大或数量过多"
+other = "导入的文件过大或数量过多"
+
+[AttachmentPoolInvalidArchive]
+description = "无法解析压缩包（仅支持 zip，manifest.json 需为 {\"文件名\": \"flag\"}，且文件名不能重复）"
+other = "无法解析压缩包（仅支持 zip，manifest.json 需为 {\"文件名\": \"flag\"}，且文件名不能重复）"
